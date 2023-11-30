@@ -72,9 +72,9 @@ void findlink(const char* html, const char* start, const char* end) {
         // cursor를 다음 검색 위치로 이동
         cursor = crawlEnd + strlen(end);
     }
-    for (int i = 0; i < linkcount ; i++) {
+ /*   for (int i = 0; i < linkcount ; i++) {
         printf("Link %d: %s\n", i + 1, link[i]);
-    }
+    }*/
 }
 
 void findcontent(const char* html, const char* start, const char* end) {
@@ -106,9 +106,9 @@ void findcontent(const char* html, const char* start, const char* end) {
         // cursor를 다음 검색 위치로 이동
         cursor = crawlEnd + strlen(end);
     }
-    for (int i = 0; i < contentcount; i++) {
-        printf("Link %d: %s\n", i + 1, content[i]);
-    }
+    //for (int i = 0; i < contentcount; i++) {
+    //    printf("Link %d: %s\n", i + 1, content[i]);
+    //}
 }
 
 void findtitle(const char* html, const char* start, const char* end) {
@@ -137,12 +137,12 @@ void findtitle(const char* html, const char* start, const char* end) {
         titlecount++;
 
 
-        // cursor를 다음 검색 위치로 이동
+        
         cursor = crawlEnd + strlen(end);
     }
-    for (int i = 0; i < titlecount; i++) {
-        printf("Link %d: %s\n", i + 1, title[i]);
-    }
+    //for (int i = 0; i < titlecount; i++) {
+    //    printf("Link %d: %s\n", i + 1, title[i]);
+    //}
 }
 
 
@@ -217,39 +217,46 @@ char* parsing(const char* url) {
 int main(void) {
    
  
-    //search(temp, "<a href=\"", "\" class=\"box\"");
 
-    //    free(links[i]);
+    //
+    //    findlink(parsing("https://fun.ssu.ac.kr/ko/notige2/info"), "<a href=\"","\" class=\"box\"");
+    //    for (int i = 0; i < linkcount; i++) {
+    //        char templink[150];
+    //        strcpy(templink, "https://fun.ssu.ac.kr");
+    //  strncat(templink, link[i], sizeof(templink) - strlen(templink) - 1);
+
+    //    findcontent(parsing(templink), "data-role=\"wysiwyg-content\">", "</div>");
+    // 
+    //    findtitle(parsing(templink), "class=\"title\">", "</h5>");
     //}
-    //link_count = 0;
-    
-        findlink(parsing("https://fun.ssu.ac.kr/ko/notige2/info"), "<a href=\"","\" class=\"box\"");
-        for (int i = 0; i < linkcount; i++) {
-            char templink[150];
-            strcpy(templink, "https://fun.ssu.ac.kr");
-      strncat(templink, link[i], sizeof(templink) - strlen(templink) - 1);
+    //    saveArraysToCSV(title, content,contentcount, "output.csv");
 
-        findcontent(parsing(templink), "data-role=\"wysiwyg-content\">", "</div>");
-     
-        findtitle(parsing(templink), "class=\"title\">", "</h5>");
+    //// 결과 출력
+    //    for (int i = 0; i < linkcount; i++) {
+    //        free(link[i]);
+    //    }
+    //    for (int i = 0; i < contentcount; i++) {
+    //        free(content[i]);
+    //    }
+    //    for (int i = 0; i < titlecount; i++) {
+    //        free(title[i]);
+    //    }
+    //    linkcount = 0;x
+    //    contentcount = 0;
+    //    titlecount = 0;
+    char base_url[] = "http://aix.ssu.ac.kr/job_info.html?&page=";
+    char url[80];  
+
+    for (int i = 1; i <= 5; i++) {
+        snprintf(url, sizeof(url), "%s%d", base_url, i);
+        findlink(parsing(url), "<td> < a href = \"", "\">");
     }
-        saveArraysToCSV(title, content,contentcount, "output.csv");
 
-
-    // 결과 출력
-        for (int i = 0; i < linkcount; i++) {
-            free(link[i]);
-        }
-        for (int i = 0; i < contentcount; i++) {
-            free(content[i]);
-        }
-        for (int i = 0; i < titlecount; i++) {
-            free(title[i]);
-        }
-        linkcount = 0;
-        contentcount = 0;
-        titlecount = 0;
-
+        base_url[] = "http://aix.ssu.ac.kr/";
+    for (int i = 1; i <= 5; i++) {
+        char url[100];  // 적절한 크기로 조절해주세요.
+        snprintf(url, sizeof(url), "%s%d", base_url, link[i]);
+        findtitle()
 
     return 0;
 }
