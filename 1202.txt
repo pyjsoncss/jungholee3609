@@ -1,0 +1,315 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <curl/curl.h>
+
+char* link[1000];
+char* content[1000];
+char* title[1000];
+char* result;
+int linkcount = 0;
+int titlecount = 0;
+int contentcount = 0;
+
+// 구조체 정의
+struct MemoryStruct {
+    char* memory;
+    size_t size;
+};
+
+struct MemoryStruct chunk;
+
+
+// 콜백 함수 정의
+size_t WriteMemoryCallback(void* contents, size_t size, size_t nmemb, void* userp) {
+    size_t realsize = size * nmemb;
+    struct MemoryStruct* mem = (struct MemoryStruct*)userp;
+
+    // 메모리를 재할당하고 데이터를 추가
+    mem->memory = realloc(mem->memory, mem->size + realsize + 1);
+    if (mem->memory == NULL) {
+        // 할당 실패 시 에러 처리
+        fprintf(stderr, "Memory allocation error\n");
+        return 0;
+    }
+
+    // 데이터를 메모리에 복사하고 사이즈 업데이트
+    memcpy(&(mem->memory[mem->size]), contents, realsize);
+    mem->size += realsize;
+    mem->memory[mem->size] = 0;
+
+    return realsize;
+}
+
+// 링크 추출을 위한 함수
+void findlink(const char* html, const char* start, const char* end) {
+    const char* cursor = html;
+
+
+    while (strstr(cursor, start) != NULL) {
+
+        cursor = strstr(cursor, start) + strlen(start);
+
+
+        char* crawlStart = cursor;
+
+        cursor = strstr(cursor, end);
+        if (cursor == NULL) {
+            break;
+        }
+        char* crawlEnd = cursor;
+        if (crawlEnd == NULL) {
+            break;
+        }
+        // 링크를 배열에 저장
+        link[linkcount] = malloc(crawlEnd - crawlStart + 1);
+        strncpy(link[linkcount], crawlStart, crawlEnd - crawlStart);
+        link[linkcount][crawlEnd - crawlStart] = '\0';
+        linkcount++;
+
+
+        // cursor를 다음 검색 위치로 이동
+        cursor = crawlEnd + strlen(end);
+    }
+    /*   for (int i = 0; i < linkcount ; i++) {
+           printf("Link %d: %s\n", i + 1, link[i]);
+       }*/
+}
+
+void findcontent(const char* html, const char* start, const char* end) {
+    const char* cursor = html;
+
+
+    while (strstr(cursor, start) != NULL) {
+
+        cursor = strstr(cursor, start) + strlen(start);
+
+
+        char* crawlStart = cursor;
+
+        cursor = strstr(cursor, end);
+        if (cursor == NULL) {
+            break;
+        }
+        char* crawlEnd = cursor;
+        if (crawlEnd == NULL) {
+            break;
+        }
+        // 링크를 배열에 저장
+        content[contentcount] = malloc(crawlEnd - crawlStart + 1);
+        strncpy(content[contentcount], crawlStart, crawlEnd - crawlStart);
+        content[contentcount][crawlEnd - crawlStart] = '\0';
+        contentcount++;
+
+
+        // cursor를 다음 검색 위치로 이동
+        cursor = crawlEnd + strlen(end);
+    }
+    //for (int i = 0; i < contentcount; i++) {
+    //    printf("Link %d: %s\n", i + 1, content[i]);
+    //}
+}
+
+void findtitle(const char* html, const char* start, const char* end) {
+    const char* cursor = html;
+
+
+    while (strstr(cursor, start) != NULL) {
+
+        cursor = strstr(cursor, start) + strlen(start);
+
+
+        char* crawlStart = cursor;
+
+        cursor = strstr(cursor, end);
+        if (cursor == NULL) {
+            break;
+        }
+        char* crawlEnd = cursor;
+        if (crawlEnd == NULL) {
+            break;
+        }
+        // 링크를 배열에 저장
+        title[titlecount] = malloc(crawlEnd - crawlStart + 1);
+        strncpy(title[titlecount], crawlStart, crawlEnd - crawlStart);
+        title[titlecount][crawlEnd - crawlStart] = '\0';
+        titlecount++;
+
+
+
+        cursor = crawlEnd + strlen(end);
+    }
+    //for (int i = 0; i < titlecount; i++) {
+    //    printf("Link %d: %s\n", i + 1, title[i]);
+    //}
+}
+
+
+
+void saveArraysToCSV(const char* column1[], const char* column2[], size_t size, const char* filename, char delimiter) {
+    // 파일 열기
+    FILE* file = fopen(filename, "a");  // "a" 모드는 파일이 이미 존재하면 뒤에 이어서 쓰기 위해 열기
+
+    // 파일이 정상적으로 열리지 않았을 경우 처리
+    if (file == NULL) {
+        fprintf(stderr, "파일을 열 수 없습니다: %s\n", filename);
+        return;
+    }
+
+    // CSV 형식으로 문자열 배열 쓰기
+    for (size_t i = 0; i < size; ++i) {
+        fprintf(file, "\"%s\"%c\"%s\"\n", column1[i], delimiter, column2[i]);
+    }
+
+    // 파일 닫기
+    fclose(file);
+}
+
+
+
+// URL과 추출하고자 하는 태그를 받아와서 처리하는 함수
+char* toString(const char* url) {
+    CURL* curl;
+    CURLcode res;
+
+    // 구조체 초기화
+    struct MemoryStruct chunk;
+    chunk.memory = malloc(1);  // 초기화
+    chunk.size = 0;
+
+    curl = curl_easy_init();
+    if (curl) {
+        // 함수의 매개변수로 전달받은 URL을 사용합니다.
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        // 데이터를 받아오기 위한 콜백 함수 설정
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+        // 콜백 함수에 전달될 사용자 데이터 설정
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
+        // example.com is redirected, so we tell libcurl to follow redirection
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+        // Perform the request, res will get the return code
+        res = curl_easy_perform(curl);
+        // Check for errors 
+        if (res != CURLE_OK)
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+
+
+        //printf("%s\n", chunk.memory);
+
+
+        // always cleanup
+        curl_easy_cleanup(curl);
+    }
+
+    // 받은 HTML을 가지고 있는 문자열을 복사하여 반환합니다.
+    char* result = _strdup(chunk.memory);
+
+    // 메모리를 해제합니다.
+
+
+    return chunk.memory;
+}
+
+void removetag(char* input) {
+    char* start = NULL;
+    char* end = NULL;
+
+    while (*input) {
+        if (*input == '<') {
+            start = input;
+        }
+        else if (*input == '>' && start != NULL) {
+            end = input;
+            // start와 end 사이의 텍스트를 제거
+            memmove(start, end + 1, strlen(end));
+            // end의 위치를 start로 업데이트
+            input = start;
+            start = end = NULL;
+        }
+
+        ++input;
+    }
+}
+
+
+void removeNbsp(char* input) {
+    char* match = NULL;
+
+    // Loop until no more matches are found
+    while ((match = strstr(input, "&nbsp;")) != NULL) {
+        // Calculate the length of the string after the match
+        size_t remainingLength = strlen(match + 6);
+
+        // Remove the match by moving the remaining string over it
+        memmove(match, match + 6, remainingLength + 1);
+    }
+}
+
+
+
+
+
+
+int main(void) {
+
+
+
+    //
+    //    findlink(parsing("https://fun.ssu.ac.kr/ko/notige2/info"), "<a href=\"","\" class=\"box\"");
+    //    for (int i = 0; i < linkcount; i++) {
+    //        char templink[150];
+    //        strcpy(templink, "https://fun.ssu.ac.kr");
+    //  strncat(templink, link[i], sizeof(templink) - strlen(templink) - 1);
+
+    //    for (int i = 0; i < linkcount; i++) {
+    //        free(link[i]);
+    //    }
+    //    for (int i = 0; i < contentcount; i++) {
+    //        free(content[i]);
+    //    }
+    //    for (int i = 0; i < titlecount; i++) {
+    //        free(title[i]);
+    //    }
+    //    linkcount = 0;
+    //    contentcount = 0;
+    //    titlecount = 0;
+    char base_url[50] = "http://aix.ssu.ac.kr/job_info.html?&page=";
+    char url[100];
+
+    for (int i = 1; i <= 5; i++) {
+        snprintf(url, sizeof(url), "%s%d", base_url, i);
+        findlink(toString(url), "<td><a href=\"", "\">");
+    }
+
+    strcpy(base_url, "http://aix.ssu.ac.kr/");
+    for (int i = 0; i < linkcount; i++) {
+
+        snprintf(url, sizeof(url), "%s%s", base_url, link[i]);
+        findtitle(toString(url), "<h4>", "</h4>");
+        findcontent(toString(url), "<table class=\"table\">", "</table>");
+    }
+    for (int i = 0; i < contentcount; i++)
+        removetag(content[i]);
+        for (int i = 0; i < titlecount; i++) 
+            removetag(title[i]);
+        saveArraysToCSV(title, content, contentcount, "aiconverge.csv", ";");
+    
+
+
+
+    for (int i = 0; i < linkcount; i++) {
+        free(link[i]);
+    }
+    for (int i = 0; i < contentcount; i++) {
+        free(content[i]);
+    }
+    for (int i = 0; i < titlecount; i++) {
+        free(title[i]);
+    }
+    linkcount = 0;
+    contentcount = 0;
+    titlecount = 0;
+    return 0;
+}
